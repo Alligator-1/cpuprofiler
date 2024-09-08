@@ -1,0 +1,13 @@
+/dll/backup
+/dll/lib
+/dll/*.dll
+/proxy/backup
+/test_app/backup
+/test_app/lib
+/test_app/*.dll
+/test_app/*.exe
+/viewer/backup
+/viewer/lib/x86_64-win64
+/viewer/*.exe
+/test_app/*.cpuprof
+/dll/*.bak
