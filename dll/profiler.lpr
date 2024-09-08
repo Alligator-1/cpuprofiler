@@ -373,29 +373,29 @@ procedure profiler_enter; assembler; nostackframe;
 asm
   push rbp
   mov rbp, rsp
-  sub rsp, $98
+  sub rsp, $A8
 
-.seh_stackalloc $A0
+.seh_stackalloc $B0
 .seh_endprologue
 
-  mov [rbp-$08], rax
-  mov [rbp-$10], rdx
+  mov [rbp-$A0], rax
+  mov [rbp-$98], rdx
 
   rdtsc
   shl rdx, 32
   or rdx, rax       // читаем RDTSC в RDX (второй аргумент)
 
-  mov [rbp-$18], rcx
-  mov [rbp-$20], r8
-  mov [rbp-$28], r9
-  mov [rbp-$30], r10
-  mov [rbp-$38], r11
-  movaps [rbp-$48], xmm0
+  mov [rbp-$90], rcx
+  mov [rbp-$88], r8
+  mov [rbp-$80], r9
+  mov [rbp-$78], r10
+  mov [rbp-$70], r11
+  movaps [rbp-$68], xmm0
   movaps [rbp-$58], xmm1
-  movaps [rbp-$68], xmm2
-  movaps [rbp-$78], xmm3
-  movaps [rbp-$88], xmm4
-  movaps [rbp-$98], xmm5
+  movaps [rbp-$48], xmm2
+  movaps [rbp-$38], xmm3
+  movaps [rbp-$28], xmm4
+  movaps [rbp-$18], xmm5
 
   mov rcx, [rbp+8] // читаем адрес возврата из стека в RCX (первый аргумент)
   call _profiler_enter
@@ -404,19 +404,19 @@ asm
   // она прибавится ко времени проведенному во функции... но не факт! можно исправить
   // вернув указатель на данные которые поправить в самый последний момент
 
-  mov rax, [rbp-$08]
-  mov rdx, [rbp-$10]
-  mov rcx, [rbp-$18]
-  mov r8,  [rbp-$20]
-  mov r9,  [rbp-$28]
-  mov r10, [rbp-$30]
-  mov r11, [rbp-$38]
-  movaps xmm0, [rbp-$48]
+  mov rax, [rbp-$A0]
+  mov rdx, [rbp-$98]
+  mov rcx, [rbp-$90]
+  mov r8,  [rbp-$88]
+  mov r9,  [rbp-$80]
+  mov r10, [rbp-$78]
+  mov r11, [rbp-$70]
+  movaps xmm0, [rbp-$68]
   movaps xmm1, [rbp-$58]
-  movaps xmm2, [rbp-$68]
-  movaps xmm3, [rbp-$78]
-  movaps xmm4, [rbp-$88]
-  movaps xmm5, [rbp-$98]
+  movaps xmm2, [rbp-$48]
+  movaps xmm3, [rbp-$38]
+  movaps xmm4, [rbp-$28]
+  movaps xmm5, [rbp-$18]
 
   mov rsp, rbp
   pop rbp
@@ -427,25 +427,25 @@ procedure profiler_leave; assembler; nostackframe;
 asm
   push rbp
   mov rbp, rsp
-  sub rsp, $28
+  sub rsp, $38
 
-.seh_stackalloc $30
+.seh_stackalloc $40
 .seh_endprologue
 
-  mov [rbp-$08], rax
+  mov [rbp-$30], rax
 
   rdtsc
   shl rdx, 32
   or rdx, rax       // читаем RDTSC в RDX (второй аргумент)
 
-  movaps [rbp-$18], xmm0
-  movaps [rbp-$28], xmm1
+  movaps [rbp-$28], xmm0
+  movaps [rbp-$18], xmm1
 
   call _profiler_leave
 
-  mov rax, [rbp-$08]
-  movaps xmm0, [rbp-$18]
-  movaps xmm1, [rbp-$28]
+  mov rax, [rbp-$30]
+  movaps xmm0, [rbp-$28]
+  movaps xmm1, [rbp-$18]
 
   mov rsp, rbp
   pop rbp
