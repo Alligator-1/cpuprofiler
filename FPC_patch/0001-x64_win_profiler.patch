@@ -1,4 +1,4 @@
-From 8a4ece464c841218c361ca83d1f58d8f36882c6e Mon Sep 17 00:00:00 2001
+From 72f473576175462f59800482a86296132a37f3b8 Mon Sep 17 00:00:00 2001
 From: Alligator-1 <alligator.ak@gmail.com>
 Date: Tue, 9 Jul 2024 13:53:49 +0500
 Subject: [PATCH] x64_win_profiler
@@ -7,11 +7,11 @@ Subject: [PATCH] x64_win_profiler
  compiler/globtype.pas              |  1 +
  compiler/options.pas               |  3 +++
  compiler/utils/ppuutils/ppudump.pp |  1 +
- compiler/x86_64/cgcpu.pas          | 15 +++++++++++++++
- 4 files changed, 20 insertions(+)
+ compiler/x86_64/cgcpu.pas          | 17 +++++++++++++++++
+ 4 files changed, 22 insertions(+)
 
 diff --git a/compiler/globtype.pas b/compiler/globtype.pas
-index 8afb6d1cf7..4365d6295f 100644
+index 32a2e1ce93..86157ad49b 100644
 --- a/compiler/globtype.pas
 +++ b/compiler/globtype.pas
 @@ -203,6 +203,7 @@        tcompextendedrec=record
@@ -23,7 +23,7 @@ index 8afb6d1cf7..4365d6295f 100644
         tmoduleswitches = set of tmoduleswitch;
  
 diff --git a/compiler/options.pas b/compiler/options.pas
-index 53d9373d51..7399958834 100644
+index 993bf01734..d133173c5b 100644
 --- a/compiler/options.pas
 +++ b/compiler/options.pas
 @@ -1664,6 +1664,9 @@ procedure TOption.interpret_option(const opt:TCmdStr;ispara:boolean);
@@ -37,7 +37,7 @@ index 53d9373d51..7399958834 100644
  
  
 diff --git a/compiler/utils/ppuutils/ppudump.pp b/compiler/utils/ppuutils/ppudump.pp
-index 5fbdbab00e..2389376659 100644
+index cefc213eba..aced7ea3a3 100644
 --- a/compiler/utils/ppuutils/ppudump.pp
 +++ b/compiler/utils/ppuutils/ppudump.pp
 @@ -2320,6 +2320,7 @@ (*     tsettings = record
@@ -49,7 +49,7 @@ index 5fbdbab00e..2389376659 100644
      globalswitchname : array[tglobalswitch] of string[73] =
         ('Global None',{cs_globalnone}
 diff --git a/compiler/x86_64/cgcpu.pas b/compiler/x86_64/cgcpu.pas
-index 36fcfc3238..3777c7b2a6 100644
+index 36fcfc3238..ef9dedf363 100644
 --- a/compiler/x86_64/cgcpu.pas
 +++ b/compiler/x86_64/cgcpu.pas
 @@ -48,6 +48,8 @@       tcgx86_64 = class(tcgx86)
@@ -61,7 +61,7 @@ index 36fcfc3238..3777c7b2a6 100644
          function use_ms_abi: boolean;
        private
          function use_push: boolean;
-@@ -64,6 +66,16 @@       tcgx86_64 = class(tcgx86)
+@@ -64,6 +66,18 @@       tcgx86_64 = class(tcgx86)
         symtable,paramgr,cpupi,
         rgcpu,ncgutil;
  
@@ -73,12 +73,14 @@ index 36fcfc3238..3777c7b2a6 100644
 +         ([po_assembler, po_noreturn]*current_procinfo.procdef.procoptions=[]) then
 +        begin
 +          a_call_name(list, func_name[enter], false);
++          if not enter and (cs_opt_level4 in current_settings.optimizerswitches) then
++            list.concat(Taicpu.op_none(A_NOP)); // prevent ret optimization with the cs_opt_level4 optimization option in fpcsrc\compiler\x86\aoptx86.pas
 +        end;
 +    end;
  
      procedure Tcgx86_64.init_register_allocators;
        var
-@@ -211,6 +223,7 @@       tcgx86_64 = class(tcgx86)
+@@ -211,6 +225,7 @@       tcgx86_64 = class(tcgx86)
          { save old framepointer }
          if not nostackframe then
            begin
@@ -86,7 +88,7 @@ index 36fcfc3238..3777c7b2a6 100644
              { return address }
              stackmisalignment := sizeof(pint);
              if current_procinfo.framepointer=NR_STACK_POINTER_REG then
-@@ -432,6 +445,8 @@       tcgx86_64 = class(tcgx86)
+@@ -432,6 +447,8 @@       tcgx86_64 = class(tcgx86)
          if current_procinfo.framepointer<>NR_STACK_POINTER_REG then
            list.concat(tai_regalloc.dealloc(NR_STACK_POINTER_REG,nil));
  
