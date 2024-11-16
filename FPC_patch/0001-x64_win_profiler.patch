@@ -1,98 +1,81 @@
-From 72f473576175462f59800482a86296132a37f3b8 Mon Sep 17 00:00:00 2001
+From bd660d07e5d9be503c8cb629dcdea4525de0a3b4 Mon Sep 17 00:00:00 2001
 From: Alligator-1 <alligator.ak@gmail.com>
 Date: Tue, 9 Jul 2024 13:53:49 +0500
 Subject: [PATCH] x64_win_profiler
 
 ---
- compiler/globtype.pas              |  1 +
- compiler/options.pas               |  3 +++
- compiler/utils/ppuutils/ppudump.pp |  1 +
- compiler/x86_64/cgcpu.pas          | 17 +++++++++++++++++
- 4 files changed, 22 insertions(+)
+ compiler/x86_64/cgcpu.pas | 40 ++++++++++++++++++++++++++++++++++++++-
+ 1 file changed, 39 insertions(+), 1 deletion(-)
 
-diff --git a/compiler/globtype.pas b/compiler/globtype.pas
-index 32a2e1ce93..86157ad49b 100644
---- a/compiler/globtype.pas
-+++ b/compiler/globtype.pas
-@@ -203,6 +203,7 @@        tcompextendedrec=record
-          cs_lto,
-          { LLVM sanitizers }
-          cs_sanitize_address
-+         ,cs_profiler
-        );
-        tmoduleswitches = set of tmoduleswitch;
- 
-diff --git a/compiler/options.pas b/compiler/options.pas
-index 993bf01734..d133173c5b 100644
---- a/compiler/options.pas
-+++ b/compiler/options.pas
-@@ -1664,6 +1664,9 @@ procedure TOption.interpret_option(const opt:TCmdStr;ispara:boolean);
-         Message1(option_found_file,opt);
-       end;
-   end;
-+
-+  if GetEnvironmentVariable('profiler')='1' then
-+    include(init_settings.moduleswitches,cs_profiler);
- end;
- 
- 
-diff --git a/compiler/utils/ppuutils/ppudump.pp b/compiler/utils/ppuutils/ppudump.pp
-index cefc213eba..aced7ea3a3 100644
---- a/compiler/utils/ppuutils/ppudump.pp
-+++ b/compiler/utils/ppuutils/ppudump.pp
-@@ -2320,6 +2320,7 @@ (*     tsettings = record
-         'CheckPointer used', {cs_checkpointer_called}
-         'Supports LLVM Link-Time Optimization' {cs_lto}
-         ,'Enable LLVM Address Sanitizer'
-+        ,'Enable Profiler'
-        );
-     globalswitchname : array[tglobalswitch] of string[73] =
-        ('Global None',{cs_globalnone}
 diff --git a/compiler/x86_64/cgcpu.pas b/compiler/x86_64/cgcpu.pas
-index 36fcfc3238..ef9dedf363 100644
+index 36fcfc3238..957b043ca3 100644
 --- a/compiler/x86_64/cgcpu.pas
 +++ b/compiler/x86_64/cgcpu.pas
 @@ -48,6 +48,8 @@       tcgx86_64 = class(tcgx86)
          procedure a_loadmm_intreg_reg(list: TAsmList; fromsize, tosize : tcgsize;intreg, mmreg: tregister; shuffle: pmmshuffle); override;
          procedure a_loadmm_reg_intreg(list: TAsmList; fromsize, tosize : tcgsize;mmreg, intreg: tregister;shuffle : pmmshuffle); override;
  
-+        procedure insert_profiler_code(list: TAsmList; enter: Boolean);
++        procedure gen_profiler_code(list: TAsmList; const func_name: string; v1: boolean = false);
 +
          function use_ms_abi: boolean;
        private
          function use_push: boolean;
-@@ -64,6 +66,18 @@       tcgx86_64 = class(tcgx86)
+@@ -62,8 +64,41 @@       tcgx86_64 = class(tcgx86)
+        globtype,globals,verbose,systems,cutils,cclasses,
+        cpuinfo,
         symtable,paramgr,cpupi,
-        rgcpu,ncgutil;
- 
-+    procedure tcgx86_64.insert_profiler_code(list: TAsmList; enter: Boolean);
+-       rgcpu,ncgutil;
++       rgcpu,ncgutil,sysutils;
++
++    procedure tcgx86_64.gen_profiler_code(list: TAsmList; const func_name: string; v1: boolean);
++    {$push}{$writeableconst on}
 +    const
-+      func_name: array [Boolean] of string = ('profiler_leave','profiler_enter');
++      profiler_checked: boolean = false;
++      profiler_enabled: boolean = false;
++    {$pop}
++    var
++      sym: tasmsymbol;
++      ref: treference;
 +    begin
-+      if (cs_profiler in init_settings.moduleswitches) and
++      if not profiler_checked then
++        begin
++          profiler_checked:=true;
++          profiler_enabled:=GetEnvironmentVariable('profiler')='1';
++        end;
+ 
++      if profiler_enabled and not defined_macro('NOPROFILING') and
 +         ([po_assembler, po_noreturn]*current_procinfo.procdef.procoptions=[]) then
 +        begin
-+          a_call_name(list, func_name[enter], false);
-+          if not enter and (cs_opt_level4 in current_settings.optimizerswitches) then
-+            list.concat(Taicpu.op_none(A_NOP)); // prevent ret optimization with the cs_opt_level4 optimization option in fpcsrc\compiler\x86\aoptx86.pas
++          if v1 then
++            begin
++              a_call_name(list, func_name, false);
++            end
++          else
++            begin
++              sym:=current_asmdata.RefAsmSymbol(func_name, AT_FUNCTION);
++              reference_reset_symbol(ref, sym, 0, sizeof(pint), []);
++              ref.refaddr:=addr_pic_no_got;
++              ref.base:=NR_RIP;
++              list.concat(taicpu.op_ref(A_CALL, S_NO, ref));
++            end;
 +        end;
 +    end;
  
      procedure Tcgx86_64.init_register_allocators;
        var
-@@ -211,6 +225,7 @@       tcgx86_64 = class(tcgx86)
+@@ -211,6 +246,7 @@       tcgx86_64 = class(tcgx86)
          { save old framepointer }
          if not nostackframe then
            begin
-+            insert_profiler_code(list, true);
++            gen_profiler_code(list, 'profiler_enter');
              { return address }
              stackmisalignment := sizeof(pint);
              if current_procinfo.framepointer=NR_STACK_POINTER_REG then
-@@ -432,6 +447,8 @@       tcgx86_64 = class(tcgx86)
+@@ -432,6 +468,8 @@       tcgx86_64 = class(tcgx86)
          if current_procinfo.framepointer<>NR_STACK_POINTER_REG then
            list.concat(tai_regalloc.dealloc(NR_STACK_POINTER_REG,nil));
  
-+        insert_profiler_code(list, false);
++        gen_profiler_code(list, 'profiler_leave');
 +
          list.concat(Taicpu.Op_none(A_RET,S_NO));
  
