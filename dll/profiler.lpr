@@ -1,12 +1,13 @@
 library profiler;
 {$mode objfpc}{$H+}
 {$modeswitch advancedrecords}
-{$POINTERMATH ON}
+{$pointermath on}
+{$asmmode intel}
 
 uses
-  Classes, SysUtils, math
-  ,nodetree, nodetreedataio
-  ,profiler_common
+  Classes, SysUtils, math,
+  nodetree, nodetreedataio,
+  profiler_common
   ;
 
 type
@@ -81,17 +82,11 @@ var
   init_thread_counter: UInt32; // для повторного запуска профайлера, уже не с 0 будет начинаться
                                // чтобы вычислсять старые потоки, у которых уже выставлен id в переменной потока!
 
-{$ASMMODE INTEL}
-// QueryThreadCycleTime ?
 function readtsc: UInt64; assembler; nostackframe;
 asm
-  push rdx
-
   rdtsc // p ?
   shl rdx, 32
   or rax, rdx
-
-  pop rdx
 end;
 
 procedure TSimpleStack.Create;
@@ -364,93 +359,85 @@ begin
 end;
 
 
-// Нужно сохранить RCX, RDX, R8, R9 - в них передаются параметры
-// а также любые регистры, которые эта функция меняет
-// и восстановить всё это в конце
-{$PUSH}
-{$ASMMODE INTEL}
+// Нужна более лучшая интеграция в FPC
+// FPC знает в каких регистрах идут параметры
+// поэтому генерацию сохранения и восстановление
+// регистров нужно сделать на стороне FPC
 procedure profiler_enter; assembler; nostackframe;
 asm
-  push rbp
-  mov rbp, rsp
-  sub rsp, $A8
+  sub rsp, $A0
 
-.seh_stackalloc $B0
+.seh_stackalloc $A0
 .seh_endprologue
 
-  mov [rbp-$A0], rax
-  mov [rbp-$98], rdx
+  mov [rsp+$00], rax
+  mov [rsp+$08], rdx
 
   rdtsc
   shl rdx, 32
   or rdx, rax       // читаем RDTSC в RDX (второй аргумент)
 
-  mov [rbp-$90], rcx
-  mov [rbp-$88], r8
-  mov [rbp-$80], r9
-  mov [rbp-$78], r10
-  mov [rbp-$70], r11
-  movaps [rbp-$68], xmm0
-  movaps [rbp-$58], xmm1
-  movaps [rbp-$48], xmm2
-  movaps [rbp-$38], xmm3
-  movaps [rbp-$28], xmm4
-  movaps [rbp-$18], xmm5
+  mov [rsp+$10], rcx
+  mov [rsp+$18], r8
+  mov [rsp+$20], r9
+  mov [rsp+$28], r10
+  mov [rsp+$30], r11
+  movaps [rsp+$40], xmm0
+  movaps [rsp+$50], xmm1
+  movaps [rsp+$60], xmm2
+  movaps [rsp+$70], xmm3
+  movaps [rsp+$80], xmm4
+  movaps [rsp+$90], xmm5
 
-  mov rcx, [rbp+8] // читаем адрес возврата из стека в RCX (первый аргумент)
+  mov rcx, [rsp+$A0] // читаем адрес возврата из стека в RCX (первый аргумент)
   call _profiler_enter
 
   // это будет неучтённая часть времени проведенного в профайлере для profiler_leave, с profiler_enter длолжно быть всё ок
   // она прибавится ко времени проведенному во функции... но не факт! можно исправить
   // вернув указатель на данные которые поправить в самый последний момент
 
-  mov rax, [rbp-$A0]
-  mov rdx, [rbp-$98]
-  mov rcx, [rbp-$90]
-  mov r8,  [rbp-$88]
-  mov r9,  [rbp-$80]
-  mov r10, [rbp-$78]
-  mov r11, [rbp-$70]
-  movaps xmm0, [rbp-$68]
-  movaps xmm1, [rbp-$58]
-  movaps xmm2, [rbp-$48]
-  movaps xmm3, [rbp-$38]
-  movaps xmm4, [rbp-$28]
-  movaps xmm5, [rbp-$18]
+  mov rax, [rsp+$00]
+  mov rdx, [rsp+$08]
+  mov rcx, [rsp+$10]
+  mov r8,  [rsp+$18]
+  mov r9,  [rsp+$20]
+  mov r10, [rsp+$28]
+  mov r11, [rsp+$30]
+  movaps xmm0, [rsp+$40]
+  movaps xmm1, [rsp+$50]
+  movaps xmm2, [rsp+$60]
+  movaps xmm3, [rsp+$70]
+  movaps xmm4, [rsp+$80]
+  movaps xmm5, [rsp+$90]
 
-  mov rsp, rbp
-  pop rbp
+  add rsp, $A0
 end;
 
-
+// Здесь, думаю, тоже самое, местро хранения result известно
 procedure profiler_leave; assembler; nostackframe;
 asm
-  push rbp
-  mov rbp, rsp
-  sub rsp, $38
+  sub rsp, $30
 
-.seh_stackalloc $40
+.seh_stackalloc $30
 .seh_endprologue
 
-  mov [rbp-$30], rax
+  mov [rsp+$00], rax
 
   rdtsc
   shl rdx, 32
   or rdx, rax       // читаем RDTSC в RDX (второй аргумент)
 
-  movaps [rbp-$28], xmm0
-  movaps [rbp-$18], xmm1
+  movaps [rsp+$10], xmm0
+  movaps [rsp+$20], xmm1
 
   call _profiler_leave
 
-  mov rax, [rbp-$30]
-  movaps xmm0, [rbp-$28]
-  movaps xmm1, [rbp-$18]
+  mov rax, [rsp+$00]
+  movaps xmm0, [rsp+$10]
+  movaps xmm1, [rsp+$20]
 
-  mov rsp, rbp
-  pop rbp
+  add rsp, $30
 end;
-{$POP}
 
 
 exports
