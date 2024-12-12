@@ -19,155 +19,181 @@
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <IsVisibleTab Value="True"/>
-        <TopLine Value="177"/>
-        <CursorPos X="37" Y="197"/>
+        <TopLine Value="209"/>
+        <CursorPos X="79" Y="228"/>
         <UsageCount Value="211"/>
         <Loaded Value="True"/>
         <LoadedDesigner Value="True"/>
       </Unit>
       <Unit>
-        <Filename Value="C:\fpclaztrunk\lazarus\components\virtualtreeview\laz.virtualtrees.pas"/>
-        <UnitName Value="laz.VirtualTrees"/>
-        <EditorIndex Value="-1"/>
-        <TopLine Value="32789"/>
-        <CursorPos X="3" Y="32442"/>
-        <UsageCount Value="8"/>
-      </Unit>
-      <Unit>
         <Filename Value="..\source\nodetree.pas"/>
         <EditorIndex Value="-1"/>
         <CursorPos Y="12"/>
-        <UsageCount Value="164"/>
+        <UsageCount Value="121"/>
       </Unit>
       <Unit>
         <Filename Value="..\dll\profiler_common.pas"/>
-        <EditorIndex Value="1"/>
+        <EditorIndex Value="3"/>
         <TopLine Value="10"/>
-        <CursorPos X="48" Y="41"/>
-        <UsageCount Value="11"/>
+        <CursorPos X="5" Y="41"/>
+        <UsageCount Value="126"/>
         <Loaded Value="True"/>
       </Unit>
+      <Unit>
+        <Filename Value="..\nodetree\nodetree.pas"/>
+        <EditorIndex Value="2"/>
+        <TopLine Value="60"/>
+        <CursorPos X="22" Y="15"/>
+        <UsageCount Value="125"/>
+        <Loaded Value="True"/>
+      </Unit>
+      <Unit>
+        <Filename Value="..\nodetree\nodeio.pas"/>
+        <EditorIndex Value="1"/>
+        <TopLine Value="4"/>
+        <CursorPos X="5" Y="9"/>
+        <UsageCount Value="125"/>
+        <Loaded Value="True"/>
+      </Unit>
+      <Unit>
+        <Filename Value="C:\fpclaztrunk\fpcsrc\packages\paszlib\src\zstream.pp"/>
+        <UnitName Value="ZStream"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="376"/>
+        <CursorPos Y="393"/>
+        <UsageCount Value="102"/>
+      </Unit>
+      <Unit>
+        <Filename Value="C:\fpclaztrunk\fpcsrc\packages\paszlib\src\infcodes.pas"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="505"/>
+        <CursorPos Y="522"/>
+        <UsageCount Value="170"/>
+      </Unit>
+      <Unit>
+        <Filename Value="C:\fpclaztrunk\fpcsrc\packages\paszlib\src\infutil.pas"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="162"/>
+        <CursorPos Y="179"/>
+        <UsageCount Value="103"/>
+      </Unit>
     </Units>
-    <JumpHistory HistoryIndex="29">
+    <JumpHistory HistoryIndex="28">
       <Position>
         <Filename Value="umainform.pas"/>
-        <Caret Line="346" Column="54" TopLine="318"/>
+        <Caret Line="321" Column="49" TopLine="305"/>
       </Position>
       <Position>
         <Filename Value="umainform.pas"/>
-        <Caret Line="261" Column="64" TopLine="241"/>
+        <Caret Line="404" Column="19"/>
       </Position>
       <Position>
         <Filename Value="umainform.pas"/>
-        <Caret Line="337" Column="53" TopLine="3"/>
+        <Caret Line="17" Column="61"/>
       </Position>
       <Position>
         <Filename Value="umainform.pas"/>
-        <Caret Line="15" Column="53"/>
+        <Caret Line="15" Column="16"/>
       </Position>
       <Position>
         <Filename Value="umainform.pas"/>
-        <Caret Line="17" Column="116"/>
+        <Caret Line="53" Column="17" TopLine="36"/>
       </Position>
       <Position>
         <Filename Value="umainform.pas"/>
-        <Caret Line="15" Column="119"/>
+        <Caret Line="88" Column="3" TopLine="71"/>
       </Position>
       <Position>
         <Filename Value="umainform.pas"/>
-        <Caret Line="174" Column="18" TopLine="156"/>
+        <Caret Line="176" Column="32" TopLine="158"/>
       </Position>
       <Position>
         <Filename Value="umainform.pas"/>
-        <Caret Line="223" Column="10" TopLine="205"/>
+        <Caret Line="231" Column="24" TopLine="218"/>
       </Position>
       <Position>
         <Filename Value="umainform.pas"/>
-        <Caret Line="18" Column="20"/>
+        <Caret Line="281" Column="23" TopLine="261"/>
       </Position>
       <Position>
         <Filename Value="umainform.pas"/>
-        <Caret Line="8" Column="70"/>
+        <Caret Line="318" Column="22" TopLine="307"/>
       </Position>
       <Position>
         <Filename Value="umainform.pas"/>
-        <Caret Line="15" Column="7" TopLine="6"/>
+        <Caret Line="417" Column="41" TopLine="389"/>
       </Position>
       <Position>
         <Filename Value="umainform.pas"/>
-        <Caret Line="47" Column="8" TopLine="30"/>
+        <Caret Line="409" Column="4" TopLine="389"/>
       </Position>
       <Position>
         <Filename Value="umainform.pas"/>
-        <Caret Line="80" Column="6" TopLine="63"/>
+        <Caret Line="407" Column="40" TopLine="389"/>
       </Position>
       <Position>
         <Filename Value="umainform.pas"/>
-        <Caret Line="126" Column="26" TopLine="108"/>
+        <Caret Line="417" Column="34" TopLine="389"/>
       </Position>
       <Position>
         <Filename Value="umainform.pas"/>
-        <Caret Line="179" Column="15" TopLine="157"/>
+        <Caret Line="418" Column="4" TopLine="389"/>
       </Position>
       <Position>
         <Filename Value="umainform.pas"/>
-        <Caret Line="182" Column="66" TopLine="164"/>
+        <Caret Line="55" Column="21" TopLine="38"/>
       </Position>
       <Position>
         <Filename Value="umainform.pas"/>
-        <Caret Line="348" Column="61" TopLine="320"/>
+        <Caret Line="328" Column="23" TopLine="311"/>
       </Position>
       <Position>
         <Filename Value="umainform.pas"/>
-        <Caret Line="50" Column="22" TopLine="34"/>
+        <Caret Line="420" TopLine="393"/>
       </Position>
       <Position>
         <Filename Value="umainform.pas"/>
-        <Caret Line="341" Column="28" TopLine="323"/>
+        <Caret Line="412" Column="17" TopLine="394"/>
       </Position>
       <Position>
         <Filename Value="umainform.pas"/>
-        <Caret Line="25" Column="55" TopLine="8"/>
+        <Caret Line="281" Column="9" TopLine="274"/>
       </Position>
       <Position>
         <Filename Value="umainform.pas"/>
-        <Caret Line="137" Column="36" TopLine="129"/>
+        <Caret Line="416" Column="26" TopLine="394"/>
       </Position>
       <Position>
         <Filename Value="umainform.pas"/>
-        <Caret Line="232" Column="65" TopLine="200"/>
+        <Caret Line="424" Column="37" TopLine="394"/>
       </Position>
       <Position>
         <Filename Value="umainform.pas"/>
-        <Caret Line="51" Column="15" TopLine="34"/>
+        <Caret Line="55" Column="20" TopLine="38"/>
       </Position>
       <Position>
         <Filename Value="umainform.pas"/>
-        <Caret Line="232" Column="61" TopLine="218"/>
+        <Caret Line="320" Column="8" TopLine="311"/>
       </Position>
       <Position>
         <Filename Value="umainform.pas"/>
-        <Caret Line="371" Column="40" TopLine="342"/>
+        <Caret Line="327" Column="12" TopLine="311"/>
       </Position>
       <Position>
         <Filename Value="umainform.pas"/>
-        <Caret Line="369" Column="21" TopLine="343"/>
+        <Caret Line="281" Column="66" TopLine="269"/>
       </Position>
       <Position>
         <Filename Value="umainform.pas"/>
-        <Caret Line="117" Column="12" TopLine="93"/>
+        <Caret Line="419" TopLine="392"/>
       </Position>
       <Position>
         <Filename Value="umainform.pas"/>
-        <Caret Line="99" Column="24" TopLine="89"/>
+        <Caret Line="411" Column="16" TopLine="392"/>
       </Position>
       <Position>
-        <Filename Value="umainform.pas"/>
-        <Caret Line="258" Column="27" TopLine="237"/>
-      </Position>
-      <Position>
-        <Filename Value="umainform.pas"/>
-        <Caret Line="265" Column="27" TopLine="244"/>
+        <Filename Value="..\nodetree\nodeio.pas"/>
+        <Caret Line="9" Column="5" TopLine="4"/>
       </Position>
     </JumpHistory>
     <RunParams>

@@ -5,16 +5,16 @@ interface
 
 uses
   Classes, SysUtils, Forms, Controls, Graphics, Dialogs, StdCtrls, ExtCtrls,
-  Generics.Collections, laz.VirtualTrees, nodetree, nodetreedataio, profiler_common, math,
+  Generics.Collections, laz.VirtualTrees, nodetree, nodeio, profiler_common, math,
   FpDbgLoader, FpDbgDwarf, FpDbgInfo, FpDbgDwarfDataClasses, FpdMemoryTools, DbgIntfBaseTypes
   ;
 
 type
   TAddrNameDict = specialize TDictionary<Pointer, String>;
 
-  TCPUProfilerTree = specialize TPointerArrayNodeTree<TProfilerNodeData, TDefaultNodeDataIO, TAbstractNodeComparator>;
+  TProfilerNode = specialize TNode<TProfilerNodeData, TNodeComparator, TSimpleAllocator>;
 
-  { TMainForm }
+  TProfilerNodeIO = specialize TNodeIO<TProfilerNode.PNode>;
 
   TMainForm = class(TForm)
     btnLoadExecutable: TButton;
@@ -48,7 +48,7 @@ type
 {$ENDIF}
     DwarfInfo: TFpDwarfInfo;
     AddrNameDict: TAddrNameDict;
-    CPUProfilerTree: TCPUProfilerTree;
+    ProfilerNode: TProfilerNode.PNode;
   public
     procedure LoadNode(const node: PVirtualNode);
     procedure LoadCPUProfile(filename: string);
@@ -83,7 +83,7 @@ procedure TMainForm.FormClose(Sender: TObject; var CloseAction: TCloseAction);
 begin
   CloseDWARF;
   AddrNameDict.Free;
-  CPUProfilerTree.Free;
+  ProfilerNode^.FreeReqursive;
 end;
 
 function ticks_to_time(ticks: UInt64): string;
@@ -171,7 +171,7 @@ begin
 
   AddrNameDict:=TAddrNameDict.Create;
 
-  CPUProfilerTree := TCPUProfilerTree.Create;
+  ProfilerNode := TProfilerNode.NewNode;
 
   DwarfInfo:=nil;
 {$IF DECLARED(TFpDbgMemModel)}
@@ -221,12 +221,12 @@ end;
 
 procedure TMainForm.vtCompareNodes(Sender: TBaseVirtualTree; Node1, Node2: PVirtualNode; Column: TColumnIndex; var Result: Integer);
 var
-  pndt1, pndt2: ^TCPUProfilerTree.TNodeDataType;
+  pndt1, pndt2: TProfilerNode.PNodeData;
 begin
   if not Column in [1..13] then Exit;
 
-  pndt1:=@TCPUProfilerTree.PNode(PPointer(Sender.GetNodeData(Node1))^)^;
-  pndt2:=@TCPUProfilerTree.PNode(PPointer(Sender.GetNodeData(Node2))^)^;
+  pndt1:=@TProfilerNode.PNode(PPointer(Sender.GetNodeData(Node1))^)^.NodeData;
+  pndt2:=@TProfilerNode.PNode(PPointer(Sender.GetNodeData(Node2))^)^.NodeData;
 
   case Column of
      1: Result:=specialize CompareValue<UInt64>(pndt1^.call_count, pndt2^.call_count);
@@ -274,9 +274,9 @@ end;
 
 procedure TMainForm.vtGetText(Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType; var CellText: String);
 var
-  pndt: ^TCPUProfilerTree.TNodeDataType;
+  pndt: TProfilerNode.PNodeData;
 begin
-  pndt:=@TCPUProfilerTree.PNode(PPointer(Sender.GetNodeData(Node))^)^.node_data;
+  pndt:=@TProfilerNode.PNode(PPointer(Sender.GetNodeData(Node))^)^.NodeData;
 
   case Column of
      0: CellText:=IntToHex(PtrUInt(pndt^.code_addr)).TrimLeft('0');
@@ -309,18 +309,20 @@ end;
 
 procedure TMainForm.LoadNode(const node: PVirtualNode);
 var
-  i: Integer;
   pvn: PVirtualNode;
-  pnd: TCPUProfilerTree.PNode;
+  pnd: TProfilerNode.PNode;
 begin
-  pnd:=@TCPUProfilerTree.PNode(PPointer(vt.GetNodeData(node))^)^.node_data;
+  pnd:=PPointer(vt.GetNodeData(node))^;
 
   vt.BeginUpdate;
 
-  for i:=0 to TCPUProfilerTree.get_child_count(pnd)-1 do
+  pnd:=pnd^.Child;
+
+  while Assigned(pnd) do
   begin
-    pvn:=vt.AddChild(node, TCPUProfilerTree.get_child(pnd, i));
-    vt.HasChildren[pvn]:=TCPUProfilerTree.get_child_count(TCPUProfilerTree.get_child(pnd, i))<>0;
+    pvn:=vt.AddChild(node, pnd);
+    vt.HasChildren[pvn]:=Assigned(pnd^.Child);
+    pnd:=pnd^.Sibling;
   end;
 
   vt.EndUpdate;
@@ -397,18 +399,23 @@ end;
 procedure TMainForm.LoadCPUProfile(filename: string);
 var
   pvn: PVirtualNode;
+  NodeLoader: TProfilerNodeIO;
 begin
   AddrNameDict.Clear;
   vt.Clear;
 
-  CPUProfilerTree.LoadFromFile(filename);
+  NodeLoader:=TProfilerNodeIO.Create(filename,'');
+  NodeLoader.LoadNode(ProfilerNode);
+  NodeLoader.Free;
+
   Caption:=form_caption + '[' + filename + ']';
 
-  pvn:=vt.AddChild(nil, @CPUProfilerTree.root_node);
-  vt.HasChildren[pvn]:=TCPUProfilerTree.get_child_count(@CPUProfilerTree.root_node)<>0;
+  pvn:=vt.AddChild(nil, ProfilerNode);
+  vt.HasChildren[pvn]:=Assigned(ProfilerNode^.Child);
+
+  ticks_per_second:=UInt64(ProfilerNode^.NodeData.code_addr);
 
   LoadNode(pvn);
-  ticks_per_second:=UInt64(TCPUProfilerTree.PNode(PPointer(vt.GetNodeData(vt.GetFirstChild(pvn)))^)^.node_data.code_addr);
 
   vt.Header.AutoFitColumns(False);
 end;

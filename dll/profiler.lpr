@@ -5,9 +5,9 @@ library profiler;
 {$asmmode intel}
 
 uses
-  Classes, SysUtils, math,
-  nodetree, nodetreedataio,
-  profiler_common
+  Classes, SysUtils,
+  profiler_common,
+  nodetree, nodeio
   ;
 
 type
@@ -26,8 +26,6 @@ type
     function &set(i: UInt32; const value: T): PT; inline;
   end;
 
-  { TSimpleStack }
-
   generic TSimpleStack<T> = record
   type PT = ^T;
   const
@@ -44,26 +42,22 @@ type
     function top: PT; inline;
   end;
 
-  TNodeComparator = class sealed
-    class function IsEqual(node_data: Pointer; data: Pointer): Boolean; static; inline;
-  end;
-
-  TProfilerNodeTree = specialize TPointerArrayNodeTree<TProfilerNodeData, TDefaultNodeDataIO, TNodeComparator>;
+  TProfilerNode = specialize TNode<TProfilerNodeData, TNodeComparator, TSimpleAllocator>;
 
   TCallInfo = record
-    node: TProfilerNodeTree.PNode;
+    node: TProfilerNode.PNode;
     t0: UInt64;
     t1: UInt64;
     prev_prof_inc: UInt64;
     prev_all: UInt64;
-    no_calculate: UInt32;
+    no_calculate: Boolean;
   end;
 
   TCallStack = specialize TSimpleStack<TCallInfo>;
 
   PThreadData = ^TThreadData;
   TThreadData = record
-    profiler_data: TProfilerNodeTree;
+    profiler_data: TProfilerNode.PNode;
     callstack: TCallStack;
   end;
 
@@ -74,7 +68,7 @@ threadvar
 
 var
   ticks_per_second: UInt64;
-  ProfilerState: UInt32 = 0;
+  ProfilerState: Boolean = False;
   Threads: TThreads;
   //cs: TRTLCriticalSection;
 
@@ -127,7 +121,8 @@ function TOnlyGrowArrayWithStableAddress.get(i: UInt32): PT;
 var
   arr_index, index: UInt32;
 begin
-  DivMod(i, array_size, arr_index, index);
+  arr_index := i div array_size;
+  index := i mod array_size;
 
   Result:=@arrays[arr_index][index];
 end;
@@ -136,7 +131,8 @@ function TOnlyGrowArrayWithStableAddress.&set(i: UInt32; const value: T): PT;
 var
   arr_index, index: UInt32;
 begin
-  DivMod(i, array_size, arr_index, index);
+  arr_index := i div array_size;
+  index := i mod array_size;
 
   if Length(arrays[arr_index])=0 then
   begin
@@ -161,45 +157,38 @@ begin
   inherited Destroy;
 end;
 
-
-class function TNodeComparator.IsEqual(node_data: Pointer; data: Pointer): Boolean;
-begin
-  Result:=TProfilerNodeTree.TNodeDataType(node_data^).code_addr=data;
-end;
-
 function RegisterNewThread(new_thread_id: UInt32): PThreadData;
 const
   frames_count = 1024; // надеюсь 1024 хватит для нового потока, не из жопы мира ведь они стартуют
 var
   NewThreadData: TThreadData;
-  node: TProfilerNodeTree.PNode;
+  node: TProfilerNode.PNode;
 
   i, count: SizeInt;
   frames: array [0..frames_count-1] of codepointer;
 
   call_info: TCallInfo;
 begin
-  NewThreadData.profiler_data:=TProfilerNodeTree.Create;
+  NewThreadData.profiler_data:=TProfilerNode.NewNode;
   NewThreadData.callstack.Create;
 
   // root_node будет информационной нодой, для хранения ThreadID и т.п.
-  NewThreadData.profiler_data.root_node.node_data.code_addr:=Pointer(ticks_per_second);
-  NewThreadData.profiler_data.root_node.node_data.call_count:=GetCurrentThreadId;
+  NewThreadData.profiler_data^.NodeData.call_count:=GetCurrentThreadId;
 
-  node:=@NewThreadData.profiler_data.root_node;
-  FillChar(call_info, SizeOf(call_info), 0);
+  node:=NewThreadData.profiler_data;
+  MyZeroMemory(call_info, SizeOf(call_info));
   call_info.node:=node;
-  call_info.no_calculate:=1;
+  call_info.no_calculate:=True;
   NewThreadData.callstack.push(call_info);
 
   count:=CaptureBacktrace(3, frames_count-1, @frames[0]);
-  for i:=count-1-2 downto 1 do // -2 - WinKernel, 1 - т.к. текущая функция уже попадает под калькуляцию
+  for i:=count-1 downto 1 do // -1 - т.к. текущая функция уже попадает под калькуляцию
   begin
-    node:=TProfilerNodeTree.add_child(node);
-    node^.node_data.code_addr:=frames[i];
-    FillChar(call_info, SizeOf(call_info), 0);
+    node:=node^.AddChild;
+    node^.NodeData.code_addr:=frames[i];
+    MyZeroMemory(call_info, SizeOf(call_info));
     call_info.node:=node;
-    call_info.no_calculate:=1;
+    call_info.no_calculate:=True;
     NewThreadData.callstack.push(call_info);
   end;
 
@@ -210,9 +199,9 @@ procedure _profiler_enter(addr: Pointer; rdtsc: UInt64);
 var
   ThreadData: PThreadData;
   call_info: TCallInfo;
-  node_: TProfilerNodeTree.PNode;
+  node_: TProfilerNode.PNode;
 begin
-  if ProfilerState=0 then Exit;
+  if not ProfilerState then Exit;
 
   // новый поток ?
   if (thread_id<=init_thread_counter) then
@@ -224,12 +213,12 @@ begin
     ThreadData:=Threads.get(thread_id-init_thread_counter);
   end;
 
-  node_:=TProfilerNodeTree.find_child_node(ThreadData^.callstack.top^.node, addr);
+  node_:=ThreadData^.callstack.top^.node^.FindChild(addr);
 
   if node_=nil then
   begin
-    node_:=TProfilerNodeTree.add_child(ThreadData^.callstack.top^.node);
-    with node_^.node_data do
+    node_:=ThreadData^.callstack.top^.node^.AddChild;
+    with node_^.NodeData do
     begin
       {.}code_addr:=addr;
       {.}prof_exc_min:=High({.}prof_exc_min);
@@ -239,7 +228,7 @@ begin
     end;
   end;
 
-  FillChar(call_info, SizeOf(call_info), 0);
+  MyZeroMemory(call_info, SizeOf(call_info));
   with ThreadData^.callstack do
   begin
     {.}push(call_info);
@@ -258,18 +247,18 @@ var
   call_info: TCallInfo;
   func_inc, func_exc, prof_inc, prof_exc: UInt64;
 begin
-  if ProfilerState=0 then Exit;
+  if not ProfilerState then Exit;
 
   // если поток ещё не был в enter - то игнорируем...
   if (thread_id<init_thread_counter) then Exit;
 
   ThreadData:=Threads.get(thread_id-init_thread_counter);
 
-  if ThreadData^.callstack.top^.no_calculate=0 then
+  if not ThreadData^.callstack.top^.no_calculate then
   begin
     call_info:=ThreadData^.callstack.pop;
 
-    with call_info.node^.node_data do
+    with call_info.node^.NodeData do
     begin
       inc({.}call_count);
 
@@ -306,7 +295,7 @@ procedure profiler_init;
 const
   sleep_time = 3;
 begin
-  if ProfilerState=1 then Exit;
+  if ProfilerState then Exit;
 
   ticks_per_second := readtsc;
   sleep(sleep_time*1000);
@@ -317,15 +306,18 @@ begin
 
   Threads:=TThreads.Create;
 
-  ProfilerState:=1;
+  ProfilerState:=True;
 end;
 
 procedure profiler_reset;
+type
+  TProfilerNodeIO = specialize TNodeIO<TProfilerNode.PNode>;
 var
   i: UInt32;
-  profiler_save: TProfilerNodeTree;
+  NodeSave: TProfilerNodeIO;
+  RootNode: TProfilerNode.PNode;
 begin
-  if ProfilerState=0 then Exit;
+  if not ProfilerState then Exit;
 
   // Хм... может тут будет выгоднее поставить большой тайм-аут
   // т.е. 100% дать всем потокам выйти из обработчиков профайлера
@@ -334,24 +326,25 @@ begin
   // сузить область критической секции до поиска/добавления ноды,
   // что само собой должно повысить производительность...
   // нужно это проверить когда всё будет готово
-  //EnterCriticalSection(_._);
-  ProfilerState:=0;
+  //EnterCriticalSection();
+  ProfilerState:=False;
   Sleep(1000); // умышленно так
-  //LeaveCriticalSection(_._);
+  //LeaveCriticalSection();
 
-  profiler_save:=TProfilerNodeTree.Create;
-  SetLength(profiler_save.root_node.child_nodes, thread_counter-init_thread_counter);
+  NodeSave:=TProfilerNodeIO.Create('', '.cpuprof');
+  RootNode:=TProfilerNode.NewNode;
+  RootNode^.NodeData.code_addr:=Pointer(ticks_per_second);
   for i:=1 to thread_counter-init_thread_counter do
   begin
-    profiler_save.root_node.child_nodes[i-1]:=@Threads.get(i)^.profiler_data.root_node;
+    RootNode^.AddChild(Threads.get(i)^.profiler_data);
   end;
-  profiler_save.SaveToFile('','.cpuprof');
-  SetLength(profiler_save.root_node.child_nodes, 0);
-  profiler_save.Free;
+  NodeSave.SaveNode(RootNode);
+  NodeSave.Free;
+
+  RootNode^.FreeReqursive;
 
   for i:=init_thread_counter+1 to thread_counter do
   begin
-    Threads.get(i)^.profiler_data.Free;
     Threads.get(i)^.callstack.Free;
   end;
 

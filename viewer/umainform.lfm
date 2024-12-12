@@ -7,7 +7,7 @@ object MainForm: TMainForm
   Caption = 'CPU profiler viewer'
   ClientHeight = 300
   ClientWidth = 500
-  LCLVersion = '3.99.0.0'
+  LCLVersion = '4.99.0.0'
   OnClose = FormClose
   OnCreate = FormCreate
   OnDropFiles = FormDropFiles
@@ -23,6 +23,7 @@ object MainForm: TMainForm
     Header.Height = 50
     Header.MainColumn = -1
     Header.MinHeight = 50
+    Indent = 10
     TabOrder = 0
     TreeOptions.SelectionOptions = [toFullRowSelect]
     OnBeforeCellPaint = vtBeforeCellPaint
