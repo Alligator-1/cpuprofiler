@@ -201,19 +201,21 @@ var
   call_info: TCallInfo;
   node_: TProfilerNode.PNode;
   L_thread_id: UInt32;
+  L_init_thread_counter: UInt32;
 begin
   if not ProfilerState then Exit;
 
   L_thread_id:=thread_id;
+  L_init_thread_counter:=init_thread_counter;
   // новый поток ?
-  if (L_thread_id<=init_thread_counter) then
+  if (L_thread_id<=L_init_thread_counter) then
   begin
     L_thread_id:=InterlockedIncrement(thread_counter);
-    ThreadData:=RegisterNewThread(L_thread_id-init_thread_counter);
+    ThreadData:=RegisterNewThread(L_thread_id-L_init_thread_counter);
     thread_id:=L_thread_id;
   end else
   begin
-    ThreadData:=Threads.get(L_thread_id-init_thread_counter);
+    ThreadData:=Threads.get(L_thread_id-L_init_thread_counter);
   end;
 
   node_:=ThreadData^.callstack.top^.node^.FindChild(addr);
@@ -250,14 +252,16 @@ var
   call_info: TCallInfo;
   func_inc, func_exc, prof_inc, prof_exc: UInt64;
   L_thread_id: UInt32;
+  L_init_thread_counter: UInt32;
 begin
   if not ProfilerState then Exit;
 
   // если поток ещё не был в enter - то игнорируем...
   L_thread_id:=thread_id;
-  if (L_thread_id<init_thread_counter) then Exit;
+  L_init_thread_counter:=init_thread_counter;
+  if (L_thread_id<L_init_thread_counter) then Exit;
 
-  ThreadData:=Threads.get(L_thread_id-init_thread_counter);
+  ThreadData:=Threads.get(L_thread_id-L_init_thread_counter);
 
   if not ThreadData^.callstack.top^.no_calculate then
   begin
